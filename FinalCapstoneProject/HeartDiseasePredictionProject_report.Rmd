@@ -1,0 +1,993 @@
+---
+title: "Heart Disease Prediction Project"
+author: "Edward Amankwah"
+date: "2019-11-28"
+output:
+  github_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+geometry: margin=.5in
+classoption: portrait
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=12) 
+```
+
+
+```{r setup2, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+One of the major courses of death can be attributed to heart disease. Many researches are on-going globally in search of methods that will aid early detection and thereby leading to reduce heart disease related death and health cost. The cause of heart disease can be complex involving many biomedical and clinical factors. Researches usually draw inferences from these records stored in databases using statistical methods to predict the presence or absence of heart disease. However, machine learning algorithms are being used to augment patient hearth delivery, to develop customized computational models capable of analyzing and predicting the presence of heart disease [1]. 
+
+This report is subdivided into introduction which includes motivation of the project and data preprocessing, methods and analysis, modelling approach, results, discussion, conclusions and references.
+
+## Motivation of Project
+
+This project is the second part of the final capstone project to complete the HarvardX professional data science certification program. The project aims at developing  machine learning algorithms capable of predicting the presence or absence of heart disease from data set obtained from the Cleveland Clinical Foundation, the Hungarian Institute of Cardiology (Budapest), the V.A Medical Center (Long Beach CA) and University Hospital Zurich (Switzerland).
+
+### Evaluation Metric
+
+The evaluation metric for the algorithm performance is the Overall Accuracy.  Overall accuracy is one of the simplest measures used to report the proportion of cases that are correctly predicted on a test set when the outcomes are categorical. The models will be built using training data set containing numerical heart disease features and the overall accuracy would be used to determine the quality of prediction on the testing dataset, which contains categorical target data. The best model would be determined based on the model prediction which produces the highest overall accuracy.
+
+# Dataset
+
+The heart disease dataset (cleveland.data [2], hungarian.data [3], switzerland.data [4] and long-beach-va.data [5], heart-disease.names) can be downloaded from the [UCI Machine Learning Repository]( http://archive.ics.uci.edu/ml/datasets/heart+disease). The database contains 76 attributes but this analysis refers to using a subset of 14 of them, including the target variable. The heart-disease.names file contains the details of attributes and variables.
+
+## Target Features
+
+The response variable (goal) is given as a diagnose of heart disease (angiographic disease status) 
+where any major vessel is designated as having “diameter narrowing” < 50% (value 0) indicate the absence of heart disease and “diameter narrowing “ >50%(value 1) indicating the presence of heart disease. 
+
+## Predictor Features
+The following description was obtained from the heart-disease.name file:
+
+* Age: age in years
+* Sex: gender (1 = male; 0 = female)
+* CP: chest pain type
+–  Value 1: typical angina
+–  Value 2: atypical angina
+–  Value 3: non-anginal pain
+–  Value 4: asymptomatic
+* Trestbps: resting blood pressure (in mm Hg on admission to the hospital)
+* Chol: serum cholesterol in mg/dl
+* FBS fasting blood sugar > 120 mg/dl (1 = true; 0 = false)
+* RestECG: resting electrocardiographic results
+–  Value 0: normal
+–  Value 1: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of
+> 005 mV)
+–  Value 2: showing probable or definite left ventricular hypertropy by Estes criteria
+* Thalach: maximum heart rate achieved in beats per minute (bpm)
+* Exang: exercise induced angina (1 = yes; 0 = no)
+* Oldpeak: ST depression induced by exercise relative to rest
+* Slope: the slope of the peak exercise ST segment
+–  Value 1: upsloping
+–  Value 2: flat
+–  Value 3: down-sloping
+* CA: number of major vessels (0-3) colored by fluoroscopy
+* Thal: 3 = normal; 6 = fixed defect; 7 = reversible defect
+
+## Preprocessing for Data Exploration
+
+The heart disease data sets were read in as comma separated files setting the string values as characters. The column headers were separately read in and then combined with the datasets by rows. The string characters were eventually converted to factors.
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE, eval = TRUE}
+
+# Note: this process could take a couple of minutes
+
+#############################################################
+# Create heart disease (hdease), training sets, and testing sets
+#############################################################
+# Note: this process could take a couple of minutes for loading required package: tidyverse and package caret
+if(!require(dplyr)) install.packages("dplyr", repos = "http://cran.us.r-project.org")
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(readr)) install.packages("readr", repos = "http://cran.us.r-project.org")
+if(!require(e1071)) install.packages("e1071", repos = "http://cran.us.r-project.org")
+if(!require(mlr)) install.packages("mrl", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(caretEnsemble)) install.packages("caretEnsemble", repos = "http://cran.us.r-project.org")
+if(!require(DataExplorer)) install.packages("DataExplorer", repos = "http://cran.us.r-project.org")
+if(!require(MASS)) install.packages("MASS", repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("rpart", repos = "http://cran.us.r-project.org")
+if(!require(randomForest)) install.packages("randomForest", repos = "http://cran.us.r-project.org")
+if(!require(gridExtra)) install.packages("gridExtra", repos = "http://cran.us.r-project.org")
+if(!require(knitr)) install.packages("knitr", repos = "http://cran.us.r-project.org")
+if(!require(corrplot)) install.packages("corrplot", repos = "http://cran.us.r-project.org")
+if(!require(klar)) install.packages("klar", repos = "http://cran.us.r-project.org")
+if(!require(xgboost)) install.packages("xgboost", repos = "http://cran.us.r-project.org")
+if(!require(matrixStats)) install.packages("matrixStats", repos = "http://cran.us.r-project.org")
+if(!require(fastAdaboost)) install.packages("fastAdaboost", repos = "http://cran.us.r-project.org")
+if(!require(earth)) install.packages("earth", repos = "http://cran.us.r-project.org")
+if(!require(ggthemes)) install.packages("ggthemes", repos = "http://cran.us.r-project.org")
+if(!require(cowplot)) install.packages("cowplot", repos = "http://cran.us.r-project.org")
+if(!require(Rmisc)) install.packages("Rmisc", repos = "http://cran.us.r-project.org")
+options(digits = 3)
+
+cleveland <- read.csv('processed.cleveland.csv', na = "?", stringsAsFactors = FALSE, header = FALSE)
+hungarian <- read.csv('processed.hungarian.csv', na = "?", stringsAsFactors = FALSE, header = FALSE)
+switzerland <- read.csv('processed.switzerland.csv', na = "?", stringsAsFactors = FALSE, header = FALSE)
+va <- read.csv('processed.va.csv', na = "?", stringsAsFactors = FALSE, header = FALSE)
+hdisease <- rbind(cleveland, hungarian, switzerland, va)
+names(hdisease) <- c('Age', 'Sex', 'CP', 'Trestbps', 'Chol', 'FBS', 'RestECG',
+                 'Thalach', 'Exang', 'Oldpeak', 'Slope', 'CA', 'Thal', 'Target')
+```
+
+## Missing Values
+
+The plot below shows the distribution of missing values in the dataset.
+
+```{r missing data plot, echo=FALSE}
+plot_missing(hdisease)
+```   
+
+
+```{r dropping nas, include = FALSE, echo=FALSE}
+#dropping rows with nas
+drops <- c("Slope","CA", "Thal")
+hd <- hdisease[ , !(names(hdisease) %in% drops)]
+#str(hd)
+hd <- na.omit(hd)
+
+hd$Target[hd$Target == 0] <- "N"
+hd$Target[hd$Target == 1] <- "Y"
+hd$Target[hd$Target == 2] <- "Y"
+hd$Target[hd$Target == 3] <- "Y"
+hd$Target[hd$Target == 4] <- "Y"
+
+hd1 <- hd
+
+#str(hd)
+na.omit(hd)
+hd$Target <- as.factor(hd$Target)
+#str(hd)
+```   
+
+Predictive features such as slope, CA and Thal are missing more than 30% of their entire dataset. 
+
+## Visualization of Important Features
+
+After data preprocessing, it is important to visualize how the predictors will influence the response variable (Target).
+
+```{r visualize importance of variables using featurePlot() for boxplot, echo=FALSE}
+featurePlot(x = hd[,1:10], 
+            y = hd$Target, 
+            plot = "box",
+            strip=strip.custom(par.strip.text=list(cex=.7)),
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")))
+```   
+
+The boxplots above show features such as Oldpeak, Chol and Trestbps have a lot of extreme values outside the 25th  – 75th percentiles. The mean and the placement of the two box plots in ‘Oldpeak’,  ‘CP’, ‘Age’, and ‘Thalach’ are visibly different indicating that they are potential predictors of the Target feature.
+
+```{r visualize importance of variables using featurePlot() for density plots, echo=FALSE}
+featurePlot(x = hd[,1:10], 
+            y = hd$Target, 
+            plot = "density",
+            strip=strip.custom(par.strip.text=list(cex=.7)),
+            scales = list(x = list(relation="free"), 
+                          y = list(relation="free")))
+```   
+
+
+Similarly, the density curves for ‘Oldpeak’,  ‘CP’, ‘Age’, and ‘Thalach’ are significantly different indicating they are potential predictors of the Target feature.
+
+# Data Exploration
+
+## Variable Correlation Plot
+
+```{r variable correlation plot, echo=FALSE}
+hd_correlation <- cor(hd[,-c(11)])
+corrplot(hd_correlation,
+         order = 'hclust',
+         tl.cex = 0.8,
+         addrect = 8)
+```   
+
+Machine learning models assume the predictor variables are independent of each other. However, the plot above shows some predictors are highly correlated with others. In this analysis predictors having a degree of correlation between variables at a value greater than 0.75 (i.e. cutoff equal to 0.25) will be dropped to make the analysis more robust.
+
+The table below shows predictors that are considered to be highly correlated and were therefore, dropped from the dataset.
+
+```{r top correlated plots, echo=FALSE}
+hd_correlation[c(1,8,9,10),c(1,8,9,10)] %>% knitr::kable( caption = 'Top Correlated Features')
+```   
+
+## Data transformation
+
+The following variables with more than 30% of missing values were initially dropped from the data asset because either they will be less represented or may not add significant information: 
+
+* Slope (slope of the peak exercise ST segment),
+* CA (number of major vessels) and 
+*	Thal (Thalassemia cardiomyopathy) features. 
+
+The target variable was transformed into a numerical binary outcome of whether patient has a heart disease or not (Y-1, N-0). 
+The Sex variable was transformed into factors of Male(1) and Female(2).
+The fasting blood sugar (FBS) was transformed into factors of concentration > 120 mg/dl (1) and  concentration <= 120 mg/dl (0).
+The chest pain type (CP) was transformed into factors of ATYPICAL ANGINA (1), NON-ANGINAL PAIN (2) and ASYMPTOMATIC (3).
+The resting electrocardiographic (RestECG) was transformed into factors of Normal (0), Abnormality(1) and Probable or Definite(2).
+The exercise induced angina (Exang) was transformed into factors of exercise induced angina (Y-1, N-0). 
+
+
+```{r data transformation, echo=FALSE}
+#Data transformation
+hd_trans <- hdisease %>% 
+  mutate(Sex = if_else(Sex == 1, "MALE", "FEMALE"),
+         FBS = if_else(FBS == 1, ">120", "<=120"),
+         CP = if_else(CP == 1, "ATYPICAL ANGINA",
+                      if_else(CP == 2, "NON-ANGINAL PAIN", "ASYMPTOMATIC")),
+         RestECG = if_else(RestECG == 0, "NORMAL",
+                           if_else(RestECG == 1, "ABNORMALITY", "PROBABLE OR DEFINITE")),
+         Exang = if_else(Exang == 1, "YES", "NO"),
+         Target = if_else(Target == 1, "Y", "N")) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  dplyr::select(Target, Sex, FBS, CP,RestECG, Exang, everything())
+
+hd_trans <- na.omit(hd_trans)
+#str(hd_trans)
+```   
+
+## Univariate Distributions
+
+```{r, univariate, warning = FALSE, echo=FALSE}
+ 
+g1 <- ggplot(hd_trans, aes(x = Age)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Age",
+                                x = "Age")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g2 <- ggplot(hd_trans, aes(x = Sex)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Sex",
+                                x = "Sex")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g3 <- ggplot(hd_trans, aes(x = CP)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Chest Pain",
+                                x = "CP")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g4 <- ggplot(hd_trans, aes(x = Trestbps)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Resting Blood Pressure",
+                                x = "Trestpbs")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g5 <- ggplot(hd_trans, aes(x = Chol)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Cholestrol",
+                                x = "Chol")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g6 <- ggplot(hd_trans, aes(x = FBS)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Fasting Blood Sugar",
+                                x = "FBS")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g7 <- ggplot(hd_trans, aes(x = RestECG)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Resting electrocardiogram",
+                                x = "RestECG")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g8 <- ggplot(hd_trans, aes(x = Thalach)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Maximum Heat Rate",
+                                x = "Thalach")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g9 <- ggplot(hd_trans, aes(x = Exang)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="Exercise Induced Angina",
+                                x = "Exang")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+g10 <-  ggplot(hd_trans, aes(x = Oldpeak)) +
+                           geom_histogram(stat="count",fill = "cornflowerblue",
+                                          color = "red") +
+                           labs(title="ST Depression Induced by Exercise",
+                                x = "Oldpeak")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+layout <- matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), nrow = 5, byrow = TRUE)
+multiplot(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10,layout = layout )
+
+```  
+
+The bar plots above show that patient’s ge, resting blood pressure, cholesterol, ST depression induced by excercise and maximum heart rate are somewhat normally distributed.  The average age ranges between 50 and 60 years with the youngest and oldest being 28 and 77, respectively. The number of female patients are less than half of the male patients. The mean cholesterol level ranges between 200 and 300 mg/dL. The distribution of maximum heart rate is skewed towards higher beats per minute measurements. The bar plot for the ST depression induced by exercise is skewed due to the large number of low values. Fast blood sugar content greater than 120 mg/dl is significantly lower than concentrations less than 120 mg/dl. The number of patients with exercise induced angina is less than half the number of patients with no exercise induced angina.
+
+## Bivariate distribution
+
+###  Predictor Variable Counts  Grouped by Response Variable
+
+The bar plots below show the count of predictor values for patients with and without heat disease.
+
+
+```{r, bivariate, predictor variable counts, warning = FALSE, echo=FALSE}
+
+p1 <- hd_trans %>% ggplot(aes(Age, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p2 <- hd_trans %>% ggplot(aes(Sex, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p3 <- hd_trans %>% ggplot(aes(CP, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p4 <- hd_trans %>% ggplot(aes(Trestbps, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p5 <- hd_trans %>% ggplot(aes(Chol, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p6 <- hd_trans %>% ggplot(aes(FBS, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p7 <- hd_trans %>% ggplot(aes(RestECG, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p8 <- hd_trans %>% ggplot(aes(Thalach, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p9 <- hd_trans %>% ggplot(aes(Exang, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+p10 <- hd_trans %>% ggplot(aes(Oldpeak, fill = Target))+
+  geom_bar(position = "dodge2")+
+  theme_classic()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_fill_manual(values = c("#4682B4","#A9A9A9"))
+#grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,vp, nrow=5, heights = c(.35,.65,.35,.65,.35),fontsize = 9)
+#plot_grid(p1, NULL,p2, NULL,p3,NULL,p4, NULL,p5, NULL,p6,NULL, p7, NULL,p8,NULL,p9, NULL,p10, ncol = 3, scale = 0.7)
+layout <- matrix(c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), nrow = 5, byrow = TRUE)
+multiplot(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10,layout = layout )
+
+```  
+
+### Variation of Sex with Age
+
+The stack histogram below shows that more males were involved in the study than females with the oldest and youngest patients  being males.
+
+```{r sex vrs age, echo=FALSE}
+## Variation of sex and age
+hist_age <- ggplot(hd_trans, aes(Age, fill = Sex))+
+  geom_histogram(bins = 30, position = 'stack', color="black")+theme_classic()+
+  scale_color_brewer(palette = "Accent")+
+  scale_fill_brewer(palette = "Accent")+
+  labs(title = "Histogram of age variable with sex", x = "age", y = "count")
+hist_age
+
+```  
+
+## Categorial Features
+
+### Variation of Sex, Chest pain, FBS and RestECG with Target
+
+```{r variation of categorical features with target, echo=FALSE}
+### Variation of Sex, Chest pain, FBS and RestECG with Target
+bar_graph1 <- grid.arrange(ggplot(hd_trans, aes(x = Sex, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = CP, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = FBS, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = Exang, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = RestECG, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+```  
+
+The bar plots above further buttress the fact that less than 25 % of the predictor features; sex, chest pain type, fasting blood sugar , exercise induced angina, and resting electrocardiographic indicate heart disease. Most patients didn’t have fasting blood sugar levels above 120 mg/dl. Resting electrocardiographic predictor had no indication of abnormality. 
+
+## Numerical Features
+
+### Variation of Trestbps, Age, Chol, Thalach, Exang and Oldpeak with Target
+
+```{r numerical feature variation with target, echo=FALSE}
+bar_graph2 <- grid.arrange(ggplot(hd_trans, aes(x = Trestbps, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = factor(Age), fill = Target))+geom_bar(position = "fill")+
+                             labs(x= "Age") +theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = Chol, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = Thalach, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)),
+                           ggplot(hd_trans, aes(x = Oldpeak, fill = Target))+geom_bar(position = "fill")+
+                             theme(axis.text.x = element_text(angle = 45, hjust = 1)))                           
+
+```  
+
+The bar plots above indicate the majority of the numerical features; trestpbs, age, cholesterol, Thalach and Oldpeak had no effect on heart disease.  Most patients didn’t have cholesterol levels above 350 mg/dl and ST depression induced by exercise (Oldpeak) relative to rest above 3.8.
+
+# Multivariate distribution
+
+##  Age, Chest pain and Target
+The stack histogram below shows that chest pain induces heart disease are more prevalent at middle to older age than younger age. Moreover, majority of the patients did not show signs of asymptomatic chest pain while angina pain may not be a good predictor of heart disease.
+
+```{r age, chest pain and target, echo=FALSE}
+#Age, Chest pain and target
+bar_graph3 <- ggplot(hd_trans, aes(Age,fill = Target)) + 
+  geom_histogram(bins=5, position = 'stack', color="black") +
+  scale_x_continuous(trans = "log2") + facet_grid(.~CP)
+bar_graph3
+```  
+
+## Age, Rest ECG and Target
+
+The stack histogram below shows that normal and probable RestECG may induces heart disease at older age than younger age. 
+
+```{r age, Rest ECG and target, echo=FALSE}
+## Age, RestECG and Target
+bar_graphs4 <- ggplot(hd_trans, aes(Age,fill = Target)) + 
+  geom_histogram(bins=5, position = 'stack', color="black") +
+  scale_x_continuous(trans = "log2") + facet_grid(.~RestECG)
+bar_graphs4
+
+```  
+
+##  Variation of Blood Pressure and Sex  across Chest Pain types
+
+```{r blood pressure and sex accross chest pain, echo=FALSE}
+bp_box <- ggplot(hd_trans, aes(x=Sex,y=Trestbps))+
+  geom_boxplot(fill = "pink")+facet_grid(~CP)+geom_smooth()+theme_classic()+
+  labs(title = "Comparison of Blood pressure across pain type",x ="Sex",y ="Blood Pressure")
+bp_box
+
+```  
+
+The box plots above indicate that the mean blood pressure across asymptomatic and non-angina chest pain types are similar irrespective of gender type. However, blood pressure across atypical angina chest pain varies significantly between male and female patients. 
+
+##  Variation of Cholesterol levels and Sex  across chest pain types
+
+```{r cholestrol levels and sex accross chest pain, echo=FALSE}
+chol_box <- ggplot(hd_trans, aes(x=Sex, y=Chol))+
+  geom_boxplot(fill = "turquoise")+facet_grid(~CP)+geom_smooth()+theme_classic()+
+  labs(title = "Comparison of Cholestoral across pain type ", x = "Sex", y = "Chol")
+chol_box
+
+```  
+
+The box plots above indicate that the mean cholesterol levels across asymptomatic and non-angina chest pain types are higher for female than male patients. However, cholesterol levels across atypical angina chest pain are insignificantly higher for female than male patients. 
+
+# Modelling
+
+## Data Processing for Modelling 
+
+The highly correlated predictor features ( Age, Thalach, Exang and Oldpeak) were dropped from the data set before modeling.
+
+The table below shows the  summary of the transformed features  before modeling:
+
+```{r modelling data processing, echo=FALSE}
+# Modelling Data Pre-Processing
+drops2 <- c("Exang","Thalach", "Age", "Oldpeak")
+hd2 <- hd1[ , !(names(hd1) %in% drops2)]
+hd2 <- na.omit(hd2)
+#str(hd2)
+hd2$Target <- as.factor(hd2$Target)
+```  
+
+```{r table of transformed features, echo=FALSE}
+summarizeColumns(hd2) %>% knitr::kable( caption = 'Feature Summary before Data Modelling')
+
+```
+
+The predictor features were converted into a matrix data type and the target feature was converted into a vector of two levels of factors.
+
+## Principal Component Analysis
+
+The predictor features dataset was scaled and centered. The table below shows the relative importance of the principal components.
+
+```{r centering and scaling, echo=FALSE}
+# Predictors as a matrix
+x <- data.frame(hd2[,1:6])
+x = as.matrix(as.data.frame(lapply(x, as.numeric)))
+#str(x)
+
+###scaling x
+x_centered <- sweep(x, 2, colMeans(x))
+x_scaled <- sweep(x_centered, 2, colSds(x), FUN = "/")
+sd(x_scaled[,1])
+```  
+
+```{r importance of components, echo=FALSE}
+pca <- prcomp(x_scaled)
+summary(pca)
+
+```  
+
+```{r variation of pc1 an pc2, echo=FALSE}
+data.frame(pca$x[,1:2], type = hd2$Target) %>%
+  ggplot(aes(PC1, PC2, color = type)) +
+  geom_point()
+```  
+
+The plot above shows the correlation of first two principal components. Patients with no heart disease tend to have larger values of PC1 than patients with the disease. Also, patients with heart disease tend to have larger values of PC2 than patients with no heart disease.
+
+The box plot below shows all the transformed PCs grouped by the presence or absence of disease. The interquartile ranges overlap for all the PCs. The mean values for all the PCs except PC5 and PC6 are all shifted.
+
+```{r pcs boxplot, echo=FALSE}
+data.frame(type = hd2$Target, pca$x[,1:6]) %>%
+  gather(key = "PC", value = "value", -type) %>%
+  ggplot(aes(PC, value, fill = type)) +
+  geom_boxplot()
+```  
+
+The plot below shows that 95 % of the variance is explained by all principal components in the transformed dataset.
+
+```{r variance explained, echo=FALSE}
+pca <- pca$sdev^2
+pca_prop_var_explained <- pca / sum(pca)
+pca_cummulative <- cumsum(pca_prop_var_explained) # Cummulative percent explained
+tab_pca_prop_var_explained <- tibble(comp = seq(1:ncol(hd2[-7])),
+                                     pca_prop_var_explained,
+                                     pca_cummulative)
+#tab_hd2_prop_var_explained
+ggplot(tab_pca_prop_var_explained,
+       aes(x = comp, y = pca_cummulative)) +
+  geom_point() +
+  geom_abline(intercept = 0.95,
+              color = 'blue',
+              slope = 0)
+```  
+
+## Data Partitioning
+
+```{r, echo = TRUE, message = FALSE, warning = FALSE, eval = TRUE}
+#Split into training and test sets
+set.seed(1, sample.kind = "Rounding")
+
+test_index <- createDataPartition(hd2$Target, times = 1, p = 0.2, list = FALSE)
+test_x <- x_scaled[test_index,]
+test_y <- hd2$Target[test_index]
+train_x <- x_scaled[-test_index,]
+train_y <- hd2$Target[-test_index]
+
+```
+
+The transformed data consisting of one binary target (Y-1 and N-0) variable and six explanatory variables (CP, Sex, Chol, Trestbps, RestECG and FBS) were split into 80% and 20% as training and test datasets, respectively. Each set resembled the complete data by having the same proportion of target classes  as shown in the bar plot below . The modelling was implemented in R with mainly caret and caretEnsemble packages. 
+
+```{r target proportions, echo=FALSE}
+## Ditribution of target variable 
+bar_target <- ggplot(hd, aes(x = Target))+geom_bar(fill = "cornflowerblue") + 
+  geom_text(stat='count', aes(label=..count..), vjust=-1)
+bar_target 
+```  
+
+# Methods and Analysis 
+
+The following machine learning algorithms were considered in this study:
+
+1.	**Kmean clustering**: it is a type of unsupervised algorithm which solves a clustering problem by a simple and easy way to classify a given data through a certain number of clusters. The cluster refers to a collection of data points aggregated together because of certain similarities. The ‘means’ in the K-means refers to averaging of the data when finding the centroid. The algorithm stops the creating and optimizing of clusters when the centroids have stabilized or a predefined number of iterations have been achieved. The kmean model was developed using 2 cluster centres to predict weather a patient has heart disease.
+
+```{r r1, echo = FALSE}
+#1 Kmean clustering
+set.seed(3, sample.kind = "Rounding") # if using R 3.6 or later
+predict_kmeans <- function(x, k) {
+  centers <- k$centers # extract cluster centers
+  # calculate distance to cluster centers
+  distances <- sapply(1:nrow(x), function(i){
+    apply(centers, 1, function(y)
+      dist(rbind(x[i,], y)))
+  })
+  max.col(-t(distances)) # select cluster with min distance to center
+}
+
+k <- kmeans(train_x, centers = 2)
+
+#Kmean overall accuracy
+kmeans_preds <- ifelse(predict_kmeans(test_x, k) == 1, "Y", "N")
+r1 <- mean(kmeans_preds == test_y)
+r1
+```
+
+The results of the Kmean is represented below:
+
+```{r results1, echo = TRUE}
+kmean_results <- tibble(method = "K mean model", OverallAccuracy = r1)
+kmean_results %>% knitr::kable()
+```
+
+2.	**Logistic regression:** logistic regression is a well-known method in statistics that is used to predict the probability of an outcome, and is especially popular for binary classification tasks. The algorithm predicts the probability of occurrence of an event by fitting data to a logistic function to predict weather a patient has heart disease. 
+
+```{r r2, echo = FALSE}
+#2 Logistic regression
+
+train_glm <- train(train_x, train_y,
+                   method = "lda")
+
+#lda overall accuracy
+glm_preds <- predict(train_glm, test_x)
+r2 <- mean(glm_preds == test_y)
+r2
+```
+
+The results of the logistic regression analysis is represented below:
+
+```{r results2, echo = TRUE}
+glm_results <- tibble(method = "Logistic Regression model", OverallAccuracy = r2)
+glm_results %>% knitr::kable()
+```
+
+3.	**LDA **: linear discriminant analysis (LDA) is a technique used in machine learning to find a linear combination of features that characterizes or separates two or more classes of objects or events. The resulting combination is used as a linear classifier. The “lda” function was implemented on  the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r3, echo = FALSE}
+#3 LDA
+
+train_lda <- train(train_x, train_y,
+                   method = "lda")
+
+#lda overall accuracy
+lda_preds <- predict(train_lda, test_x)
+r3 <- mean(lda_preds == test_y)
+r3
+```
+
+The results of the linear descriminant analysis is represented below:
+
+```{r results3, echo = TRUE}
+lda_results <- tibble(method = "Linear Descriminant Analysis model", OverallAccuracy = r3)
+lda_results %>% knitr::kable()
+```
+
+4.	**QDA** : quadratic discriminant analysis (QDA) provides an alternative approach like LDA to logistic regression, the QDA classifier assumes that the observations from each class are drawn from a Gaussian distribution assuming that each class has its own covariance matrix. The “qda” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r4, echo = FALSE}
+#4 QDA
+
+train_qda <- train(train_x, train_y,
+                   method = "qda")
+
+#qda overall accuracy
+qda_preds <- predict(train_qda, test_x)
+r4 <- mean(qda_preds == test_y)
+r4
+```
+
+The results of the quadratic descriminant analysis is represented below:
+
+```{r results4, echo = TRUE}
+qda_results <- tibble(method = "Quadratic Descriminant Analysis model", OverallAccuracy = r4)
+qda_results %>% knitr::kable()
+```
+
+5.	**Loess gram**: loess short (locally estimated scatterplot smoothing) regression is a non-parametric approach that fits multiple regression in local neighborhood. The fit at a point is made using points in a neighbourhood of, weighted by their distance from the original point. The differences in ‘parametric’ variables are ignored when computing the distances. The “gamLoess” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r5, warning = FALSE, echo = FALSE}
+#5 Loess gram
+
+train_loess <- train(train_x, train_y,
+                   method = "gamLoess")
+
+#loess gram overall accuracy
+loess_preds <- predict(train_loess, test_x)
+r5 <- mean(loess_preds == test_y)
+r5
+```
+
+The results of the locally estimated scatterplot smoothing is represented below:
+
+```{r results5, echo = TRUE}
+loess_results <- tibble(method = "Locally Estimated Scatterplot Smoothing model", OverallAccuracy = r5)
+loess_results %>% knitr::kable()
+```
+
+6.	**KNN**: knn or k-nearest neighbors algorithm is one of the simplest machine learning algorithms and is an example of instance-based learning, where new data are classified based on stored, labeled instances. The distance between the stored data and the new instance is calculated by means of some kind of a similarity measure. This similarity measure is typically expressed by a distance measure such as the Euclidean distance, cosine similarity or the Manhattan distance. The number of k nearest neighbors was tuned with a sequence of values ranging between 2 and 21 and the optimal neighbor of 5 was used.
+
+```{r r6, echo = FALSE}
+#6 knn
+set.seed(2, sample.kind = "Rounding")
+# value of can be determined
+tuning <- data.frame(k = seq(3, 21, 2))
+train_knn <- train(train_x, train_y,
+                   method = "knn",
+                   tuneGrid = tuning)
+train_knn$bestTune
+
+
+#knn overall accuracy
+knn_preds <- predict(train_knn, test_x)
+r6 <- mean(knn_preds == test_y)
+r6
+```
+
+The results of the k-nearest neighbors is represented below:
+
+```{r results6, echo = TRUE}
+knn_results <- tibble(method = "k-nearest neighbors model", OverallAccuracy = r6)
+knn_results %>% knitr::kable()
+```
+
+7.	**Random Forest**: an ensemble approach to .finding the decision tree that best fits the training data by creating many decision trees and then determining the "average" one. The "random" part of the term refers to building each of the decision trees from a random selection of features; the "forest" refers to the set of decision trees. The number of variables randomly sampled as candidates at each split (i.e. mtry) was fine- tuned over a sequence of values ranging between 3 and 9 and an optimal value of 3 was used to train the model. The “rf” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease. 
+
+```{r r7, echo = FALSE}
+#7 rf
+#What value of mtry gives the highest accuracy
+#tuning <- data.frame(mtry = c(3, 5, 7, 9)) # can expand to seq(3, 21,2)
+#train_rf <- train(train_x, train_y,
+                  #method = "rf",
+                  #tuneGrid = tuning,
+                  #importance = TRUE)
+#train_rf$bestTune
+
+#rf accuracy
+#save(train_rf, file = "train_rf.RData")
+load("train_rf.RData")
+
+#rf overall accuracy
+rf_preds <- predict(train_rf, test_x)
+r7 <- mean(rf_preds == test_y)
+r7
+```
+
+The results of the random forest is represented below:
+
+```{r results7, echo = TRUE}
+rf_results <- tibble(method = "Random Forest model ", OverallAccuracy = r7)
+rf_results %>% knitr::kable()
+```
+
+8.	**Neural network with PCA**: a single-hidden-layer neural network, possibly with skip-layer connections that has the ability to ‘learn’ relationships among variables. They represent an innovative technique for model fitting that doesn’t rely on conventional assumptions necessary for standard models and they can also quite effectively handle multivariate response data. A neural network model is very similar to a non-linear regression model, with the exception that the former can handle an incredibly large amount of model parameters. For this reason, neural network models are said to have the ability to approximate any continuous function. The model was preprocessed by centering and scaling before “pca” was applied. The model was also tuned with a tuneLength of 10 before prediction on the test set.
+
+```{r r8, echo = FALSE}
+#8 nnet with pca
+#train_nnet_pca <- train(train_x, train_y,
+                        #method="nnet",
+                        #preProcess=c('center', 'scale', 'pca'),
+                        #tuneLength=10,
+                        #trace=FALSE)
+
+# accuracy
+#save(train_nnet_pca, file = "train_nnet_pca.RData")
+load("train_nnet_pca.RData")
+
+#nnet_pca overall accuracy
+nnet_pca_preds <- predict(train_nnet_pca, test_x)
+r8 <- mean(nnet_pca_preds == test_y)
+r8
+```
+
+The results of the neural network with PCA is represented below:
+
+```{r results8, echo = TRUE}
+nnet_pca_results <- tibble(method = "Neural Network with PCA model", OverallAccuracy = r8)
+nnet_pca_results %>% knitr::kable()
+```
+
+9.	**MARS**: multivariate additive regression splines (MARS) is a none-parametric method with elements of generalized additive models (GAM) or neuronal networks and regression trees. It does not assume a deterministic relationship (linear, logistic, pareto) between the predictors and the response. However, it uses multiple linear regressions to make its predictions. It essentially creates a piecewise linear model which provides an intuitive stepping block into nonlinearity after grasping the concept of linear regression and other intrinsically linear models. The model was tuned with a tuneLength of 10 and the “earth” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r9, echo = FALSE}
+#9 MARS
+#set.seed(4, sample.kind = "Rounding")
+#train_earth <- train(train_x, train_y,
+                     #method="earth",
+                     #tuneLength=10,
+                     #trace=FALSE)
+
+# MARS accuracy
+#save(train_earth, file = "train_earth.RData")
+load("train_earth.RData")
+
+#MARS overall accuracy
+earth_preds <- predict(train_earth, test_x)
+r9 <- mean(earth_preds == test_y)
+r9
+```
+
+The results of the multivariate additive regression splines is represented below:
+
+```{r results9, echo = TRUE}
+earth_results <- tibble(method = "Multivariate Additive Regression Splines model", OverallAccuracy = r9)
+earth_results %>% knitr::kable()
+```
+
+10.	**Support Vector Machine with Radial Kernel**: support vector machines (SVMs) are supervised learning models that analyze data and recognize patterns, and that can be used for both classification and regression tasks. It does not use probabilistic model like any other classifier but simply generates hyperplanes or simply putting lines ,to separate and classify the data in some feature space into different regions. A radial kernel with a tuningLength of 15 was used to account for the smoothness of the decision boundary and control the variance of the model.
+
+```{r r10, echo = FALSE}
+#10 SVM radial
+# Creation of SVM Model
+#train_svm_rd <- train(train_x, train_y,
+                      #method="svmRadial",
+                      #tuneLength=15)
+
+# accuracy
+#save(train_svm_rd, file = "train_svm_rd.RData")
+load("train_svm_rd.RData")
+
+#SMM Radial overall accuracy
+svm_rd_preds <- predict(train_svm_rd, test_x)
+r10 <- mean(svm_rd_preds == test_y)
+r10
+```
+
+The results of the support vector machine with radial kernel is represented below:
+
+```{r results10, echo = TRUE}
+svm_rd_results <- tibble(method = "Support Vector Machine with Radial Kernel model", OverallAccuracy = r10)
+svm_rd_results %>% knitr::kable()
+```
+
+11.	**Adaboost**: the algorithm fits a sequence of weak learners on different weighted training data. It starts by predicting original data set and gives equal weight to each observation. If prediction is incorrect using the first learner, then it gives higher weight to observation which have been predicted incorrectly. Being an iterative process, it continues to add learner(s) until a limit is reached in the number of models or accuracy. The model was tuned with a tuneLength of 5 and the “adaboost” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r11, echo = FALSE}
+#11 adaboost
+#set.seed(4, sample.kind = "Rounding")
+#train_adaboost <- train(train_x, train_y,
+                       # method="adaboost",
+                        #tuneLength=5)
+
+#save(train_adaboost, file = "train_adaboost.RData")
+load("train_adaboost.RData")
+
+#adaboost overall accuracy
+adaboost_preds <- predict(train_adaboost, test_x)
+r11 <- mean(adaboost_preds == test_y)
+r11
+```
+
+The results of the additive boosting is represented below:
+
+```{r results11, echo = TRUE}
+adaboost_results <- tibble(method = "Additive Boosting model", OverallAccuracy = r11)
+adaboost_results %>% knitr::kable()
+```
+
+12.	**Decision Tree**: the model is represented as a sequence of branching statements. Decision tree is a type of supervised learning algorithm (having a pre-defined target variable) that is mostly used in classification problems. It works for both categorical and continuous input and output variables. The “rpart” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r12, echo = FALSE}
+#12 decision tree
+train_dt <- train(train_x, train_y,
+                  method="rpart")
+
+#adaboost overall accuracy
+dt_preds <- predict(train_dt, test_x)
+r12 <- mean(dt_preds == test_y)
+r12
+```
+
+The results of the decision tree is represented below:
+
+```{r results12, echo = TRUE}
+dt_results <- tibble(method = "Decision Tree model", OverallAccuracy = r12)
+dt_results %>% knitr::kable()
+```
+
+13.	**Extreme Gradient Boost with Dart**: xgboost mostly combines a huge number of regression trees with a small learning rate to optimize booting tree algorithms. Trees added early are significant and trees added late are unimportant. The DART( dropout meet multiple additive regression trees) method was adopted to drop trees in order to resolve overfitting. By employing multi-threads and imposing regularization, xgboost is able to utilize more computational power and get more accurate prediction. The algorithm is slow due to the randomness introduced during training. The model was tuned with a tuneLength of 5 and the “xgboostDART” function was implemented on the training dataset and prediction was done on the test set to find weather a patient has heart disease.
+
+```{r r13, echo = FALSE}
+#13 xgboost
+# Creation of xgboost
+#train_xgb_dart <- train(train_x, train_y,
+                        #method="xgbDART",
+                        #tuneLength=5)
+# accuracy
+#save(train_xgb_dart, file = "train_xgb_dart.RData")
+load("train_xgb_dart.RData")
+
+#xgboost overall accuracy
+xgb_dart_preds <- predict(train_xgb_dart, test_x)
+r13 <- mean(xgb_dart_preds == test_y)
+r13
+```
+
+The results of the extreme gradient boasting is represented below:
+
+```{r result13, echo = TRUE}
+xgb_dart_results <- tibble(method = "Extreme Gradient Boosting model", OverallAccuracy = r13)
+xgb_dart_results %>% knitr::kable()
+```
+
+14.	**Ensemble using caretEnsemble** : ensemble methods are models composed of multiple weaker models that are independently trained and whose predictions are combined in some way to make the overall prediction. The thirteen models described above were all included in this ensemble modelling.
+
+```{r r14, echo = FALSE}
+#14 ensemble
+algorithmList <- c('glm','lda','qda','gamLoess','knn','rf',
+                   'nnet','earth','svmRadial','adaboost', 'rpart', 'xgbDART')
+set.seed(6, sample.kind = "Rounding")
+#train_ensemble <- caretList(train_x, train_y, methodList=algorithmList)
+
+# accuracy
+
+#save(train_ensemble, file = "train_ensemble.RData")
+load("train_ensemble.RData")
+
+# ensemble overall accuracy
+ensemble_preds <- predict(train_ensemble, test_x)
+r14 <- mean(ensemble_preds == test_y)
+r14
+```
+
+The results of the ensemble is represented below:
+
+```{r results14, echo = TRUE}
+ensemble_results <- tibble(method = "Ensemble model", OverallAccuracy = r14)
+ensemble_results %>% knitr::kable()
+```
+
+# Results
+
+## The Overall Accuracy Results
+
+The plots below show the predictor features of importance for four classifiers, random forest, support vector machines, decision tress and extreme gradient boosting:
+
+```{r feature importance, echo=FALSE}
+par_imp <- grid.arrange(plot(varImp(train_rf), main="Top variables - Random Forest"),
+                        plot(varImp(train_svm_rd), main="Top variables - SVM - Radial"),
+                        plot(varImp(train_dt), main="Top variables - Decision Tree"),
+                        plot(varImp(train_xgb_dart), main="Top variables - XGBoost"))
+
+```
+
+The variables of importance show a consistent trend of chest pain being the most important predictor of heart disease. Other predictors that are important are sex and cholesterol levels although the SVM model ranked “Sex” as the least important predictor. The overall accuracy scores for the used models are shown below:
+
+```{r table, echo = FALSE}
+models <- c("K means", "Logistic regression", "LDA", "QDA", "Loess",
+            "K Nearest Neighbors", "Random Forest","Neural Network PCA",
+            "MARS","Support Vector Machine- Radial",
+            "Adaboost", "Decision Tree", "Extreme Gradient Boosting - Dart",
+            "Ensemble")
+accuracy <- c(mean(kmeans_preds == test_y),
+              mean(glm_preds == test_y),
+              mean(lda_preds == test_y),
+              mean(qda_preds == test_y),
+              mean(loess_preds == test_y),
+              mean(knn_preds == test_y),
+              mean(rf_preds == test_y),
+              mean(nnet_pca_preds == test_y),
+              mean(earth_preds == test_y),
+              mean(svm_rd_preds == test_y),
+              mean(adaboost_preds == test_y),
+              mean(dt_preds == test_y),
+              mean(xgb_dart_preds == test_y),
+              mean(ensemble_preds == test_y))
+Results <- data.frame(Model = models, Accuracy = accuracy)
+```
+
+```{r table_results, echo = FALSE}
+Results %>% knitr::kable( caption = 'Model Accuracy') 
+```
+
+The graphical representation of the models ranked by their overall accuracy is shown below:
+
+```{r graph_results, echo = FALSE}
+ggplot(Results, aes(x=reorder(Model, Accuracy), Accuracy)) +
+  geom_bar(stat="identity", fill = "cornflowerblue")+
+  geom_text(label = round(Results$Accuracy, 3)) +
+  theme_economist_white()+
+  labs(title="Results by Overall Accuracy",
+       x="Model",
+       y="Overall Acurracy")+
+  coord_flip()
+```
+
+The highest overall accuracy score that was computed is 0.812
+
+# Discussion 
+
+The data exploration indicated that patient chest pain, sex, cholesterol levels, resting blood pressure, fasting blood sugar and resting electrocardiogram were potential explanatory variables for predicting the presence of heart disease. The chest pain variable was found to have the highest predictive power. The top three models that performed reasonably well were extreme gradient boosting (xgb), support vector machine with radial kernel and decision tree. The best and the least performed models, xgb and k means reported an overall accuracy score of 81.2% and 43%, respectively. 
+
+# Conclusions
+
+## Summary
+
+Explanatory features, slope of the peak exercise ST segment (Slope), reverse defects (Thal) and the number of major vessels (0-3) colored by fluoroscopy (CA) were dropped out of the dataset because they were missing more than 30% of their measurements. In order to reduce multicollinearity and increase the independency of predictors, explanatory features (age; Age, exercise induced angina ; Exang, maximum heart rate ; Thalach and ST depression induced by exercise relative to rest; Oldpeak) found to have a degree of correlation above 0.75 between variables were also dropped from the dataset. 
+
+It can be concluded that, for the UCI heart disease dataset, extreme gradient boosting model was the best to predict whether a patient have heart disease or not.
+
+## Limitations
+
+Overall accuracy has some disadvantages when the dataset is imbalance. However, the target feature in the transformed dataset was pretty balanced with cases of heart disease and no disease being 51.76 % and 48.24 %, respectively. Most of the model parameters were either partially tuned or not tuned as this would require higher computer time. When predicting heart disease, it can be very dangerous for patients if the patients have heart disease and model predicts otherwise. The prediction of False Negatives should therefore be further investigated before selecting the best model for deployment and future investigations.
+
+# References 
+
+1. Shameer K, Johnson KW, et al. Heart. 1-9, 2018.
+2. Detrano R, V.A. Medical Center, Long Beach and Cleveland Clinic Foundation, CA, USA
+3. Janosi A, Hungarian Institute of Cardiology. Budapest, Hungary
+4. Steinbrunn W, University Hospital, Zurich, Switzerland
+5. Detrano R, V.A. Medical Center, Long Beach and Cleveland Clinic Foundation, CA, USA
+6. http://archive.ics.uci.edu/ml/datasets/heart+disease
+7. https://rafalab.github.io/dsbook/
+
+
