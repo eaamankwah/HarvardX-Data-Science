@@ -1,0 +1,15 @@
+MovieLens Project - HarvardX: PH125.9x Capstone Course for the Data Science Professional Certificate
+
+Movie Recommendation System: algorithm to predict user ratings of movies
+
+This project includes the development of a machine learning algorithm that predicts movie ratings based on the MovieLens dataset (edx).
+
+This MovieLens folder contains:
+
+MovieLens_report.Rmd -> Project report in .rmd format
+
+MovieLens_report.pdf -> Project report in .pdf format
+
+MovieLens_Script -> R-Script that generates the data analysis
+
+This project was created as part of the final capstone project.
